@@ -208,18 +208,105 @@ boolean MatrixKeyToLEDsClass::pIsLockSwitchActivated(void)
 #endif // !USE_RFID
 }
 
+void MatrixKeyToLEDsClass::pHandleLockStateIndicator(void)
+{
+	uint32_t currentTick = millis();
+	switch (pLockState)
+	{
+	case LockState::LOCKED:
+		pLockIndicatorState = ON;
+#ifdef USE_RFID
+		pShortLockIndicatorState = OFF;
+#else 
+		pShortLockIndicatorState = ON;
+#endif
+
+		break;
+	case LockState::SHORT_LOCKED:
+		pLockIndicatorState = OFF;
+		pShortLockIndicatorState = ON;
+		break;
+	case LockState::UNLOCKED:
+		pLockIndicatorState = OFF;
+		pShortLockIndicatorState = OFF;
+		break;
+	}
+
+	//blink when its going to lock
+	if (GetLockState() == SHORT_LOCKED)
+	{
+		uint32_t lockTick = pLockAutoEnableCounter + pLockDelayTime;	//Lock moment
+		if (lockTick > currentTick)		//valid math
+		{
+			if (currentTick > lockTick - LOCK_INDICATOR_BLINK_TIME || lockTick < LOCK_INDICATOR_BLINK_TIME)
+			{
+				pLockIndicatorState = BLINK;
+			}
+		}
+	}
+
+	if (pShortLockIndicatorPin != NO_PIN)
+	{
+		switch (pShortLockIndicatorState)
+		{
+		case ON:
+			digitalWrite(pShortLockIndicatorPin, HIGH);
+			break;
+		case OFF:
+			digitalWrite(pShortLockIndicatorPin, LOW);
+			break;
+		}
+	}
+	if (pLockIndicatorPin != NO_PIN)
+	{
+		switch (pLockIndicatorState)
+		{
+		case ON:
+			digitalWrite(pLockIndicatorPin, HIGH);
+			break;
+		case OFF:
+			digitalWrite(pLockIndicatorPin, LOW);
+			break;
+		case BLINK:
+			static uint32_t flashTimer = 0;	//Wait to flash the indicator
+			static uint32_t holdTimer = 0;	//Wait to turn off the indicator
+			static boolean isTurnedOn = false;
+			const uint32_t blinkInterval = 1000;
+			const uint32_t holdInterval = 100;
+			if (flashTimer > currentTick)
+				flashTimer = currentTick;
+			if (holdTimer > currentTick)
+				holdTimer = currentTick;
+			if (!isTurnedOn)
+			{
+				if (currentTick - flashTimer > blinkInterval)
+				{
+					//flash now!
+					isTurnedOn = true;
+					holdTimer = currentTick;
+					Beep();
+				}
+			}
+			if (isTurnedOn)
+			{
+				if (currentTick - holdTimer > holdInterval)
+				{
+					isTurnedOn = false;
+					flashTimer = currentTick;
+				}
+			}
+
+			digitalWrite(pLockIndicatorPin, isTurnedOn);
+
+			break;
+		}
+	}
+}
+
 #ifdef USE_RFID
 void MatrixKeyToLEDsClass::pHandleLockButton(void)
 {
-	//if (GetLoginState() == LoginState::LOGGED_OUT)
-	//{
-	//	if (GetLockState() != LockState::LOCKED)
-	//	{
-	//		Lock();
-	//	}
-	//}
-
-	if (pLockButtonPin == NO_PIN)
+	if (pShortLockButtonPin == NO_PIN)
 		return;
 
 	uint32_t currentTick = millis();
@@ -285,12 +372,8 @@ void MatrixKeyToLEDsClass::pHandleLockButton(void)
 		}
 	}
 }
-void MatrixKeyToLEDsClass::pHandleLoginStateIndicator(void)
-{
-	if (pLoginStateIndicatorPin == NO_PIN)
-		return;
-	digitalWrite(pLoginStateIndicatorPin, GetLoginState() == LoginState::LOGGED_IN);
-}
+
+
 #else
 void MatrixKeyToLEDsClass::pHandleLockSwitch(void)
 {
@@ -320,8 +403,6 @@ void MatrixKeyToLEDsClass::pHandleLockSwitch(void)
 void MatrixKeyToLEDsClass::ShortLock(void)
 {
 	pLockState = SHORT_LOCKED;
-	if (pLockStateIndicatorPin != NO_PIN)
-		digitalWrite(pLockStateIndicatorPin, HIGH);
 	LOGLNF("SHORT LOCKED");
 	pResetAutoLockTimers();
 }
@@ -330,8 +411,6 @@ void MatrixKeyToLEDsClass::Unlock(void)
 {
 	//Timer3.stop();
 	pLockState = UNLOCKED;
-	if (pLockStateIndicatorPin != NO_PIN)
-		digitalWrite(pLockStateIndicatorPin, LOW);
 	LOGLNF("UNLOCKED");
 	//We refresh LEDs after unlock
 	for (uint8_t row = 0; row < ROWS; row++)
@@ -345,8 +424,6 @@ void MatrixKeyToLEDsClass::Unlock(void)
 void MatrixKeyToLEDsClass::Lock(void)
 {
 	pLockState = LOCKED;
-	if (pLockStateIndicatorPin != NO_PIN)
-		digitalWrite(pLockStateIndicatorPin, HIGH);
 	LOGLNF("LOCKED");
 	pResetAutoLockTimers();
 }
@@ -366,6 +443,8 @@ void MatrixKeyToLEDsClass::pHandleShortLockButton(void)
 		return;
 
 	uint32_t currentTick = millis();
+
+	//Auto short lock
 	if (pShortLockDelayTime != 0)
 	{
 		if (currentTick < pShortLockAutoEnableCounter)
@@ -452,7 +531,14 @@ void MatrixKeyToLEDsClass::pHandleTempOutput()
 {
 	if (pTempOutputPin == NO_PIN)
 		return;
-	if (digitalRead(pTempOutputPin) == LOW && !isWaitingToTurnTempOutputOn)
+
+	uint8_t row;
+	uint8_t col;
+	toRowCol(pTempOutputKeyIndex, &row, &col);
+	digitalWrite(pTempOutputPin, pLEDStateArray[row][col]);
+
+	//The code below used to auto turn on-off temp output. Customer asked to disable!
+	/*if (digitalRead(pTempOutputPin) == LOW && !isWaitingToTurnTempOutputOn)
 		return;
 
 	if (pTempOutputInitTmr > millis())
@@ -472,15 +558,15 @@ void MatrixKeyToLEDsClass::pHandleTempOutput()
 	if (millis() - pTempOutputIntervalTmr > pTempOutputInterval)
 	{
 		digitalWrite(pTempOutputPin, LOW);
-	}
+	}*/
 }
 
 void MatrixKeyToLEDsClass::pFlashTempOutput(uint8_t keyIndex)
 {
-	if (keyIndex != pTempOutputKeyIndex)
+	/*if (keyIndex != pTempOutputKeyIndex)
 		return;
 	isWaitingToTurnTempOutputOn = true;
-	pTempOutputInitTmr = millis();			//start counting to turn on
+	pTempOutputInitTmr = millis();			//start counting to turn on*/
 }
 
 void MatrixKeyToLEDsClass::init(void)
@@ -582,11 +668,11 @@ void MatrixKeyToLEDsClass::Execute(void)
 #ifdef USE_RFID
 	MS.Execute();
 	obj.pHandleLockButton();
-	obj.pHandleLoginStateIndicator();
 #else
 	obj.pHandleLockSwitch();
 #endif // USE_RFID
 
+	obj.pHandleLockStateIndicator();
 	obj.pHandleShortLockButton();
 	obj.pHandleTempOutput();
 
@@ -687,7 +773,7 @@ void MatrixKeyToLEDsClass::SetKeyToggleStyle(uint8_t row, uint8_t column, uint8_
 void MatrixKeyToLEDsClass::SetKeyToggleStyle(uint8_t index, uint8_t toggleStyle)
 {
 	uint8_t row = index / COLUMNS;
-	uint8_t column = index - row*COLUMNS;
+	uint8_t column = index - row * COLUMNS;
 	SetKeyToggleStyle(row, column, toggleStyle);
 }
 
@@ -803,19 +889,11 @@ void MatrixKeyToLEDsClass::AddKeyGroup(uint8_t * btnArray, uint8_t size)
 }
 
 #ifdef USE_RFID
-void MatrixKeyToLEDsClass::SetLockButton(uint8_t pin, uint8_t logicLevel, uint32_t delayTime, uint32_t holdTime = 1000)
-{
-	//pLockButtonPin = pin;
-	//pinMode(pLockButtonPin, INPUT);
-	pLockButtonActiveLogicLevel = logicLevel;
-	pLockDelayTime = delayTime;
-	pLockButtonHoldTime = holdTime;
-}
 
-void MatrixKeyToLEDsClass::SetLoginStateIndicatorPin(uint8_t pin)
+void MatrixKeyToLEDsClass::SetLockIndicatorPin(uint8_t pin)
 {
-	pLoginStateIndicatorPin = pin;
-	pinMode(pLoginStateIndicatorPin, OUTPUT);
+	pLockIndicatorPin = pin;
+	pinMode(pLockIndicatorPin, OUTPUT);
 }
 
 #else
@@ -827,26 +905,29 @@ void MatrixKeyToLEDsClass::SetLockSwitch(uint8_t pin, uint8_t level)
 }
 #endif // !USE_RFID
 
-void MatrixKeyToLEDsClass::SetShortLockButton(uint8_t pin, uint8_t level, uint32_t delayTime = 0)
+void MatrixKeyToLEDsClass::SetLockButton(uint8_t pin, uint8_t level, uint32_t shortLockDelayTime, uint32_t lockDelayTime)
 {
 	pShortLockButtonPin = pin;
 	pinMode(pShortLockButtonPin, INPUT);
 	pShortLockButtonPinActiveLogicLevel = level;
-	pShortLockDelayTime = delayTime;
+	pLockButtonActiveLogicLevel = level;
+	pShortLockDelayTime = shortLockDelayTime * 1000;
+	pLockDelayTime = lockDelayTime * 1000;
 }
 
-void MatrixKeyToLEDsClass::SetLockStateIndicatorPin(uint8_t pin)
+void MatrixKeyToLEDsClass::SetShortLockIndicatorPin(uint8_t pin)
 {
-	pLockStateIndicatorPin = pin;
-	pinMode(pLockStateIndicatorPin, OUTPUT);
-	digitalWrite(pLockStateIndicatorPin, LOW);
+	pShortLockIndicatorPin = pin;
+	pinMode(pShortLockIndicatorPin, OUTPUT);
+	digitalWrite(pShortLockIndicatorPin, LOW);
 }
 
-void MatrixKeyToLEDsClass::SetTempOutput(uint8_t pin, uint8_t keyIndex, uint32_t initTime, uint32_t interval = 100)
+//void MatrixKeyToLEDsClass::SetTempOutput(uint8_t pin, uint8_t keyIndex, uint32_t initTime, uint32_t interval = 100)
+void MatrixKeyToLEDsClass::SetTempOutput(uint8_t pin, uint8_t keyIndex)
 {
 	pTempOutputPin = pin;
-	pTempOutputInitTime = initTime;
-	pTempOutputInterval = interval;
+	//pTempOutputInitTime = initTime;
+	//pTempOutputInterval = interval;
 	pTempOutputKeyIndex = keyIndex;
 	pinMode(pTempOutputPin, OUTPUT);
 	digitalWrite(pTempOutputPin, LOW);
@@ -868,7 +949,7 @@ void MatrixKeyToLEDsClass::GetButtonsState(uint8_t(*buttonArray)[ROWS * COLUMNS]
 uint8_t MatrixKeyToLEDsClass::GetButtonState(uint8_t buttonNumber)
 {
 	uint8_t row = buttonNumber / COLUMNS;
-	uint8_t column = buttonNumber - row*COLUMNS;
+	uint8_t column = buttonNumber - row * COLUMNS;
 	return GetButtonState(row, column);
 }
 
@@ -893,7 +974,7 @@ void MatrixKeyToLEDsClass::GetLEDsState(uint8_t(*LEDArray)[ROWS * COLUMNS])
 uint8_t MatrixKeyToLEDsClass::GetLEDState(uint8_t LEDNumber)
 {
 	uint8_t row = LEDNumber / COLUMNS;
-	uint8_t column = LEDNumber - row*COLUMNS;
+	uint8_t column = LEDNumber - row * COLUMNS;
 	return GetLEDState(row, column);
 }
 

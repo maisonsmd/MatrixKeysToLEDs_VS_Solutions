@@ -10,7 +10,7 @@
 #endif
 
 //Uncomment this line to use external RFID module
-#define USE_RFID
+//#define USE_RFID
 
 #include <SPI.h>
 #include <DirectIO.h>
@@ -37,7 +37,7 @@
 #define ROWS		8		//Max value. If use more, change the algorithm back to 2D array (changed!!)
 #define COLUMNS		8
 
-//#define ENABLE_LOG
+#define ENABLE_LOG
 
 #ifdef ENABLE_LOG
 #define BEGIN(x)	Serial.begin(x)
@@ -62,6 +62,7 @@
 #define TOGGLE_BIT(BYTE,BIT)		BYTE ^= 0x01 << BIT
 
 #define NO_PIN		255
+#define LOCK_INDICATOR_BLINK_TIME	10000
 
 //ButtonLogic
 #define	INACTIVE	0x00	//onRelease
@@ -149,40 +150,46 @@ protected:
 	uint8_t pReactMoment = ON_CLICK;
 
 	uint32_t pShortLockAutoEnableCounter = 0;
-#ifdef USE_RFID
-	//uint8_t pLockButtonPin = NO_PIN;
+	IndicatorState pShortLockIndicatorState = OFF;
+
+
+	IndicatorState pLockIndicatorState = OFF;
 	uint8_t pLockButtonActiveLogicLevel = LOW;
 	uint32_t pLockDelayTime;
 	uint32_t pLockButtonHoldTime;
-	uint8_t pLoginStateIndicatorPin = NO_PIN;
+	uint8_t pLockIndicatorPin = NO_PIN;
 
 	uint32_t pLockButtonPressTime = 0;
 	uint32_t pLockAutoEnableCounter = 0;
+#ifdef USE_RFID
+	//hold the lock state
+	LockState pLockState = LOCKED;
 #else
+	//hold the lock state
+	LockState pLockState = SHORT_LOCKED;
 	//Use Lock Switch to lock keypad
 	uint8_t pLockSwitchPin = NO_PIN;
 	uint8_t pLockSwitchActiveLogicLevel = LOW;
 
 #endif // !USE_RFID
-	//hold the lock state
-	LockState pLockState = LockState::UNLOCKED;
+
 	//Hold the login state, seperate with the lock state above
 public:	//not good!
-	LoginState pLoginState = LoginState::LOGGED_OUT;
+	LoginState pLoginState = LOGGED_OUT;
 private:
 
 	uint8_t pShortLockButtonPin = NO_PIN;
 	uint8_t pShortLockButtonPinActiveLogicLevel = LOW;
-	uint8_t pLockStateIndicatorPin = NO_PIN;
+	uint8_t pShortLockIndicatorPin = NO_PIN;
 	uint32_t pShortLockDelayTime;
 
 
 	uint8_t pTempOutputPin = NO_PIN;
 	uint8_t pTempOutputKeyIndex;
-	uint32_t pTempOutputInitTmr = 0;
-	uint32_t pTempOutputIntervalTmr = 0;
-	uint32_t pTempOutputInitTime = 0;	//wait to ON
-	uint32_t pTempOutputInterval = 100;	//wait to OFF
+	//uint32_t pTempOutputInitTmr = 0;
+	//uint32_t pTempOutputIntervalTmr = 0;
+	//uint32_t pTempOutputInitTime = 0;	//wait to ON
+	//uint32_t pTempOutputInterval = 100;	//wait to OFF
 	boolean isWaitingToTurnTempOutputOn = false;
 
 	struct KeyGroup {
@@ -206,9 +213,9 @@ private:
 
 	void pResetAutoLockTimers(void);
 	void pHandleShortLockButton(void);
+	void pHandleLockStateIndicator(void);
 #ifdef USE_RFID
 	void pHandleLockButton(void);
-	void pHandleLoginStateIndicator(void);
 #else
 	void pHandleLockSwitch(void);
 #endif // USE_RFID
@@ -248,15 +255,15 @@ public:
 	LoginState GetLoginState(void);
 	LockState GetLockState(void);
 
-	void SetShortLockButton(uint8_t pin, uint8_t level, uint32_t delayTime = 0);
+	void SetLockButton(uint8_t pin, uint8_t level, uint32_t shortLockDelayTime, uint32_t lockDelayTime = 0);
 
-	void SetLockStateIndicatorPin(uint8_t pin);
-	void SetTempOutput(uint8_t pin, uint8_t keyIndex, uint32_t initTime, uint32_t interval = 100);
+	void SetShortLockIndicatorPin(uint8_t pin);
+	//void SetTempOutput(uint8_t pin, uint8_t keyIndex, uint32_t initTime, uint32_t interval = 100);
+	void SetTempOutput(uint8_t pin, uint8_t keyIndex);
 
 #ifdef USE_RFID
 	//Set the period to completely lock the key pad after the short lock event
-	void SetLockButton(uint8_t pin, uint8_t logicLevel, uint32_t delayTime, uint32_t holdTime = 1000);
-	void SetLoginStateIndicatorPin(uint8_t pin);
+	void SetLockIndicatorPin(uint8_t pin);
 #else
 	void SetLockSwitch(uint8_t pin, uint8_t level);
 #endif // USE_RFID
