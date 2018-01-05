@@ -10,7 +10,7 @@
 #endif
 
 //Uncomment this line to use external RFID module
-//#define USE_RFID
+#define USE_RFID
 
 #include <SPI.h>
 #include <DirectIO.h>
@@ -37,7 +37,7 @@
 #define ROWS		8		//Max value. If use more, change the algorithm back to 2D array (changed!!)
 #define COLUMNS		8
 
-#define ENABLE_LOG
+//#define ENABLE_LOG
 
 #ifdef ENABLE_LOG
 #define BEGIN(x)	Serial.begin(x)
@@ -156,7 +156,7 @@ protected:
 	IndicatorState pLockIndicatorState = OFF;
 	uint8_t pLockButtonActiveLogicLevel = LOW;
 	uint32_t pLockDelayTime;
-	uint32_t pLockButtonHoldTime;
+	uint32_t pLockButtonHoldTime = 1000;
 	uint8_t pLockIndicatorPin = NO_PIN;
 
 	uint32_t pLockButtonPressTime = 0;

@@ -49,8 +49,8 @@ void I2CDataTransferClass::Request(uint8_t address)
 	}
 	uint8_t responser = arr[0];
 	uint8_t groupId = arr[1];
-	//LOGLN(String(responser) + " responsed groupId = " + String(groupId));
-	/*for (uint8_t i = 0; i < sizeof(arr); i++)
+	/*Serial.println(String(responser) + " responsed groupId = " + String(groupId));
+	for (uint8_t i = 0; i < sizeof(arr); i++)
 	{
 		Serial.print(arr[i], HEX);
 		Serial.print(',');
@@ -59,7 +59,7 @@ void I2CDataTransferClass::Request(uint8_t address)
 	if (groupId == DEFAULT_GROUP)
 	{
 		RequestDataGroup.SetBytes(arr + 2);
-		//LOGLN(RequestDataGroup.GetValue<boolean>(0));
+		//Serial.println(ReceiveDataGroup.GetValue<float>(0));
 	}
 	else
 	{

@@ -12,22 +12,6 @@
 #include "DataTransferer.h"
 #include <Wire.h>
 
-#define ENABLE_LOG
-
-#ifdef ENABLE_LOG
-#define BEGIN(x)	Serial.begin(x)
-#define LOG(x)		Serial.print(x)
-#define LOGF(x)		Serial.print(F(x))
-#define LOGLN(x)	Serial.println(x)
-#define LOGLNF(x)	Serial.println(F(x))
-#else
-#define BEGIN(x)
-#define LOG(x)
-#define LOGF(x)
-#define LOGLN(x)
-#define LOGLNF(x)
-#endif // ENABLE_LOG
-
 #define PACKAGE_SIZE 32
 #define DEFAULT_GROUP 255
 

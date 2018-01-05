@@ -16,4 +16,9 @@ C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\Master.c
  C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\MatrixKeyToLEDs.h \
  C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\libraries\SPI\src/SPI.h \
  D:\Drives\OneDrive\Documents\Arduino\libraries\DirectIO/DirectIO.h \
- D:\Drives\OneDrive\Documents\Arduino\libraries\DirectIO/ports.h
+ D:\Drives\OneDrive\Documents\Arduino\libraries\DirectIO/ports.h \
+ C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\MS_Communication.h \
+ C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\I2CDataTransfer.h \
+ C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\DataTransferer.h \
+ C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\DataGroup.h \
+ C:\Users\maiso\AppData\Local\Temp\VMBuilds\Master\mega_atmega2560\Debug\Sodaq_DS3231.h

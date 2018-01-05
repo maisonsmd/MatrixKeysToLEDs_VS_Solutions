@@ -12,7 +12,7 @@
 #include "DataTransferer.h"
 #include <Wire.h>
 
-#define ENABLE_LOG
+//#define ENABLE_LOG
 
 #ifdef ENABLE_LOG
 #define BEGIN(x)	Serial.begin(x)
