@@ -66,7 +66,6 @@ void setup()
 	}
 
 	UserManager.AddUser("Nguyen Van A", "3695EBA0");
-	LOGLN(UserManager.GetUser(0)->name);
 	UserManager.AddUser("Pham Van B", "86B777A1");
 	SM.LockMaster();
 }
@@ -191,7 +190,7 @@ boolean ScanUsers()
 	LOGLNF("SCANNING USERS: ");
 	if (!dataFile)
 	{
-		LOGLNF("CAN'T OPEN FILE, MAY BE IT DOESN'T NOT EXITS OR CORRUPTED!");
+		LOGLNF("CAN'T OPEN FILE, MAY BE IT DOESN'T EXITS OR CORRUPTED!");
 		return false;
 	}
 
